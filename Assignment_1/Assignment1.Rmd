@@ -1,0 +1,337 @@
+---
+title: "Homework 1"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### View it online: http://acsweb.ucsd.edu/~djc035/Assignment1.html
+
+# Investigation
+What is the difference in weight between babies born to mothers who smoked during pregnancy and those who did not? 
+Is this difference important to the health of the baby?
+
+## Analysis 1
+Summarize numerically the two distributions of birth weight for babies born to women who smoked during their pregnancy and for babies born to women who did not smoke during their pregnancy. 
+```{r read in data}
+#read in "babies.txt" into data
+data <- read.table("babies.txt", header=TRUE)
+head(data)
+```
+Check if unknown value 999 is in bwt column
+```{r check for unknown in bwt}
+999 %in% data$bwt
+```
+Check the unique values in the smoke column
+```{r check for unknown in smoke column}
+unique(data$smoke)
+```
+Show the number of rows in data
+```{r get number of rows in data}
+nrow(data)
+```
+Cleaning the data by removing rows with 999 in bwt and 9 in smoke
+```{r cleaning data}
+#cleaning unknown data rows
+data <- data[!(data$bwt==999 | data$smoke==9),]
+```
+Again check if unknown value 999 is in bwt column
+```{r re-check for unknown in bwt}
+999 %in% data$bwt
+```
+Again check the unique values in the smoke column
+```{r re-check for unknown in smoke}
+unique(data$smoke)
+```
+Show the number of rows in clean data
+```{r re-get number of rows in data}
+nrow(data)
+```
+Make two seperate data version one with rows that are only smokers (smoke==1) and non-smokers (smoke==0)
+```{r make sub datasets}
+#use which() function to select rows which contain observation of smokers
+smoker.ind <- which(data['smoke'] == 1)
+#we pass in the vector of indices and use setdiff() function to get the non-smokers
+data.smoker <- data[smoker.ind,]
+nonsmoker.ind <- which(data['smoke'] == 0)
+data.nonsmoker <- data[nonsmoker.ind,]
+```
+
+### Summaries
+
+Numerical summary of the distribution of birth weight for babies born to women who <b>smoked</b> during their pregnancy.
+```{r summary of smoker data}
+summary(data.smoker$bwt) 
+var(data.smoker$bwt)
+
+```
+
+Numerical summary of the distribution of birth weight for babies born to women who <b>did not smoke</b> during their pregnancy.
+```{r summary of non-smoker data}
+summary(data.nonsmoker$bwt)
+var(data.nonsmoker$bwt)
+```
+## Analysis 2
+Use graphical methods to compare the two distributions of birth weight.
+
+### Histograms
+
+Histogram of distribution of birth weight for babies born to women who <b>smoked</b> during their pregnancy.
+```{r}
+hist(data.smoker$bwt, xlim=c(40,180), ylim=c(0,150), breaks=30, col='red2', main="Histogram of BWT for Babies Born to Smokers", xlab="Birth Weight in Ounces (BWT)")
+```
+
+Histogram of distribution of birth weight for babies born to women who <b>did not smoke</b> during their pregnancy.
+```{r}
+hist(data.nonsmoker$bwt, xlim=c(40,180), ylim=c(0,150), breaks=30, col='royalblue2', main="Histogram of BWT for Babies Born to Non-smokers", xlab="Birth Weight in Ounces (BWT)")
+```
+
+### Box Plots
+
+Box plots for <b>both</b> smoker and non-smoker mothers
+```{r}
+#change data$smoke labels for the graph
+data$smoke[data$smoke == 0] <- "non-smoker"
+data$smoke[data$smoke == 1] <- "smoker"
+boxplot(bwt~smoke, data, main="Boxplot of BWT Data", xlab="Parent Type", ylab="Birth Weight in Ounces (BWT)", pars = list(boxwex = 0.8, staplewex = 0.5, outwex = 0.5))
+```
+
+Rereading and cleaning the data since the labels were changed to make the box plots.
+```{r}
+#reread and clean the data
+data <- read.table("babies.txt", header=TRUE)
+data <- data[!(data$bwt==999 | data$smoke==9),]
+
+#use which() function to select rows which contain observation of smokers
+smoker.ind <- which(data['smoke'] == 1)
+#we pass in the vector of indices and use setdiff() function to get the non-smokers
+data.smoker <- data[smoker.ind,]
+nonsmoker.ind <- which(data['smoke'] == 0)
+data.nonsmoker <- data[nonsmoker.ind,]
+```
+
+### Density Plots
+
+Density plot which includes the distribution for <b>both</b> smoker and non-smoker mothers. The dashed line are the means of each distribution.
+```{r}
+#loading packages
+library(ggplot2)
+library(plyr)
+
+#TEST code
+#p <- ggplot(data, aes(x=bwt)) + geom_density()
+#p + geom_vline(aes(xintercept=mean(bwt)), color="blue", linetype="dashed", size=1)
+#change line color and fill color
+#ggplot(data, aes(x=bwt)) + geom_density(color="darkblue", fill="lightblue")
+#change line type
+#ggplot(data, aes(x=bwt)) + geom_density(linetype="dashed")
+
+#change data$smoke labels for the graph
+data$smoke[data$smoke == 0] <- "non-smoker"
+data$smoke[data$smoke == 1] <- "smoker"
+mu <- ddply(data, "smoke", summarise, grp.mean=mean(bwt))
+head(mu)
+#change density plot line colors by groups
+#ggplot(data, aes(x=bwt, color=smoke)) + geom_density()
+#add mean lines
+p <- ggplot(data, aes(x=bwt, color=smoke)) + geom_density() + geom_vline(data=mu, aes(xintercept=grp.mean, color=smoke), linetype="dashed")
+p + scale_color_manual(values=c("royalblue2", "red2")) + labs(y="Density", x="Birth Weight in Ounces (BWT)") + ggtitle("Density Plot for Smoker and Non-smoker")
+```
+
+Rereading and cleaning the data since the labels were changed to make the density plots.
+```{r}
+#reread and clean the data
+data <- read.table("babies.txt", header=TRUE)
+data <- data[!(data$bwt==999 | data$smoke==9),]
+head(data)
+
+#use which() function to select rows which contain observation of smokers
+smoker.ind <- which(data['smoke'] == 1)
+#we pass in the vector of indices and use setdiff() function to get the non-smokers
+data.smoker <- data[smoker.ind,]
+nonsmoker.ind <- which(data['smoke'] == 0)
+data.nonsmoker <- data[nonsmoker.ind,]
+```
+
+### Q-Q Plots
+
+Q-Q Plot of birth weight for babies born to women who <b>smoked</b> during their pregnancy.
+```{r}
+qqnorm(data.smoker$bwt, pch=1, frame=FALSE, main="Q-Q Plot of BWT for Babies Born to Smokers")
+qqline(data.smoker$bwt, col="red2", lwd=2)
+```
+
+Q-Q Plot of birth weight for babies born to women who <b>did not smoke</b> during their pregnancy.
+```{r}
+qqnorm(data.nonsmoker$bwt, pch=1, frame=FALSE, main="Q-Q Plot of BWT for Babies Born to Non-smokers")
+qqline(data.nonsmoker$bwt, col="royalblue2", lwd=2)
+```
+
+Q-Q Plot of birth weight for babies born to <b>all</b> women.
+```{r}
+qqnorm(data$bwt, pch=1, frame=FALSE, main="Q-Q Plot of BWT for Babies Born")
+qqline(data$bwt, col="purple", lwd=2)
+```
+
+## Analysis 3
+Compare the frequency, or incidence, of low-birth-weight babies for the two groups. How reliable do you think your estimates are? That is, how would the incidence of low birth weight change if a few more or fewer babies were classified as low birth weight?
+
+### Simulation Test
+
+Below is our code for the simulation test. We first calculate the observation difference.
+```{r}
+non_smoker_under <- data[(data$smoke==0 & data$bwt<=88),]
+smoker_under <- data[(data$smoke==1 & data$bwt<=88),]
+nrow(non_smoker_under)
+nrow(smoker_under)
+
+non_smoker<- data[(data$smoke==0),]
+smoker <- data[(data$smoke==1),]
+nrow(non_smoker)
+nrow(smoker)
+
+nrow(non_smoker_under)/nrow(non_smoker)
+nrow(smoker_under)/nrow(smoker)
+```
+
+```{r}
+smoker.ind <- which(data['smoke'] == 1)
+#we pass in the vector of indices and use setdiff() function to get the non-smokers
+data.smoker <- data[smoker.ind,]
+nonsmoker.ind <- which(data['smoke'] == 0)
+data.nonsmoker <- data[nonsmoker.ind,]
+nrow(data.smoker)
+```
+
+<b>Observation Difference</b>
+```{r}
+obs_diff = (nrow(smoker_under)/nrow(smoker)) - (nrow(non_smoker_under)/nrow(non_smoker))
+obs_diff
+```
+
+<b>Simulation</b>
+
+Number of time simulated is 10,000.
+```{r Simulation Test}
+numcases <- 10000
+
+res <- list()
+
+for (i in 1:numcases) {
+  test_data <- data.frame(bwt=sample(data$bwt), gestation=data$gestation,  parity=data$parity,  age=data$age,  height=data$height,  weight=data$weight,  smoke=data$smoke)
+  
+  non_smoker_under <- test_data[(test_data$smoke==0 & test_data$bwt<=88),]
+  smoker_under <- test_data[(test_data$smoke==1 & test_data$bwt<=88),]
+  
+  non_smoker<- test_data[(test_data$smoke==0),]
+  smoker <- test_data[(test_data$smoke==1),]
+
+  test_stat = (nrow(smoker_under)/nrow(smoker)) - (nrow(non_smoker_under)/nrow(non_smoker))
+  
+  res <- c(res, test_stat)
+}
+df <- do.call(rbind.data.frame, res)
+```
+
+Histogram which shows the distribution of test statistics from the simualtion. Dotted blue line is the observed difference.
+```{r}
+names(df)[names(df) == colnames(df)[1]] <- "test_stats"
+hist(abs(df)$test_stats, xlim=c(0,0.06), main="Histogram of Average Differences in Incidence of Underweight Babies", xlab="Test Statistic")
+abline(v=obs_diff, col="blue", lty=2)
+```
+
+Density plot which shows the distribution of test statistics from the simualtion. Dotted blue line is the observed difference.
+```{r}
+p <- ggplot(df, aes(x=test_stats)) + geom_density()
+p + geom_vline(aes(xintercept=obs_diff), color="blue", linetype="dashed", size=1) + labs(y="Density", x="Test Statistic") + ggtitle("Density Plot of Average Differences in Incidence of Underweight Babies")
+```
+
+<b>P-value Test</b>
+```{r}
+p_value <- 0.01
+df <- df[(df$test_stats >= obs_diff),]
+df
+nrow(df)
+p_test <- nrow(df)/10000
+p_test
+```
+We see that from our simulation test there is never a test difference as extreme as our observed difference. Which means our observed difference is not due to random chance.
+
+<!--
+# WIP BELOW
+```{r}
+#reread and clean the data
+data <- read.table("babies.txt", header=TRUE)
+data <- data[!(data$bwt==999 | data$smoke==9),]
+head(data)
+```
+
+```{r}
+summary(data)
+```
+```{r}
+mean(data$bwt)
+sd(data$bwt)
+```
+
+```{r sm setup}
+#install.packages("sm",repos="http://cran.rstudio.com/")
+#library(sm)
+#attach(data)
+```
+```{r}
+# create value labels
+#smoke.f <- factor(smoke, levels= c(0,1), labels = c("0 (non-smoker)", "1 (smoker)"))
+
+# plot densities
+#sm.density.compare(bwt, smoke, xlab="Birth Weight in Ounces (BWT)")
+#title(main="BWT Distribution by Parent Type")
+
+# add legend via mouse click
+#colfill<-c(2:(2+length(levels(smoke.f))))
+#legend(locator(1), levels(smoke.f), fill=colfill)
+```
+
+
+```{r}
+#install.packages('ggplot2',repos="http://cran.rstudio.com/")
+library(ggplot2)
+```
+```{r}
+ggplot(data, aes(bwt)) + geom_histogram()
+```
+
+```{r}
+irreg.index <- which(data$smoke == 9)
+data.irregular <- data[irreg.index,]
+data.irregular
+```
+```{r}
+qnorm(0.95)
+quantile(data$bwt, 0.1)
+```
+```{r}
+qqnorm(data$bwt) # q-q plot against normal distribution
+qqline(data$bwt)
+```
+```{r}
+qqplot(data.smoker$bwt, data.nonsmoker$bwt) # q-q plot of smoker and non-smoker samples
+abline(c(0,1)) # reference line
+```
+```{r}
+
+```
+```{r}
+
+```
+-->
+
+
+
+
+
+
+
+
