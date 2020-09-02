@@ -1,0 +1,42 @@
+---
+title: "Advanced analysis"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r}
+data <- read.table("hcmv.txt", header=TRUE)
+```
+
+
+
+```{r}
+cdf.data = ecdf(data$location)
+plot(cdf.data,main="CDF for our Sample",xlab="Location")
+```
+
+```{r}
+set.seed(100)
+random_sample = sample(x=data$location, size=296, replace=TRUE)
+cdf.random = ecdf(random_sample)
+plot(cdf.random,main="CDF for Random Distribution",xlab="Location")
+```
+
+```{r}
+set.seed(2017)
+n <- 1000
+data_unif <- runif(n, min=177, max=228953)
+cdf.unif = ecdf(data_unif)
+plot(cdf.unif,main="CDF for Uniform Distribution",xlab="Location")
+```
+
+

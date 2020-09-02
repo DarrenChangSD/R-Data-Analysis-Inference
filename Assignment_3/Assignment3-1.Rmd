@@ -1,0 +1,357 @@
+---
+title: "Homework 3"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### View it online: http://acsweb.ucsd.edu/~djc035/Assignment3.html
+
+# Objective
+How do we find clusters of palindromes? How do we determine whether a cluster is just a chance occurrence or a potential replication site?
+
+## 1. 
+<b>Locations:</b> Here the goal is to graphically compare your sample palindrome locations to random uniform scatter. To do this, you can visualize the distribution of your sample, the distributions of random uniform scatter instances, and the theoretical uniform distribution. You can visualize the distributions using either histograms or empirical cdfs. Be sure to simulate the random uniform scatter several times (at least 5 times). This is sufficient for the [Random Scatter] section in the homework prompt.
+```{r read in data}
+#read in "hcmv.txt" into data
+data <- read.table("hcmv.txt", header=TRUE)
+head(data)
+```
+
+```{r}
+nrow(data)
+```
+
+```{r}
+hist(data$location, xlim=c(0,250000), ylim=c(0,15), breaks=seq(0,232000, by=4000), col='red2', main="Distribution of Sample")
+```
+
+```{r}
+set.seed(100)
+data_sample = sample(x=data$location, size=296, replace=TRUE)
+hist(data_sample, xlim=c(0,250000), ylim=c(0,15), breaks=seq(0,232000, by=4000), col='red2', main="Distribution of Random Uniform Scatter")
+```
+
+```{r}
+N <- max(data$location, na.rm=TRUE)
+n <- 296
+gene <- seq(177, N)
+
+set.seed(200)
+data.sample <- sample.int(N, size=n, replace=FALSE)
+aHistogram = hist(data.sample, xlim=c(0,250000), ylim=c(0,15), breaks=seq(0,232000, by=4000), col='red2', main="a")
+
+data.sample <- sample.int(N, size=n, replace=FALSE)
+bHistogram = hist(data.sample, xlim=c(0,250000), ylim=c(0,15), breaks=seq(0,232000, by=4000), col='red2', main="b")
+
+data.sample <- sample.int(N, size=n, replace=FALSE)
+cHistogram = hist(data.sample, xlim=c(0,250000), ylim=c(0,15), breaks=seq(0,232000, by=4000), col='red2', main="c")
+
+data.sample <- sample.int(N, size=n, replace=FALSE)
+dHistogram = hist(data.sample, xlim=c(0,250000), ylim=c(0,15), breaks=seq(0,232000, by=4000), col='red2', main="d")
+
+data.sample <- sample.int(N, size=n, replace=FALSE)
+eHistogram = hist(data.sample, xlim=c(0,250000), ylim=c(0,15), breaks=seq(0,232000, by=4000), col='red2', main="e")
+
+aHistColor = rgb(1,0,0,0.2)
+bHistColor = rgb(0,1,0,0.2)
+cHistColor = rgb(0,0,1,0.2)
+dHistColor = rgb(1,1,0,0.2)
+eHistColor = rgb(1,0,1,0.2)
+
+plot(aHistogram, col=aHistColor, ylim=c(0,15), xlim=c(0,250000), main=NA)
+plot(bHistogram, col=bHistColor, ylim=c(0,15), xlim=c(0,250000), add=T)
+plot(cHistogram, col=cHistColor, ylim=c(0,15), xlim=c(0,250000), add=T)
+plot(dHistogram, col=dHistColor, ylim=c(0,15), xlim=c(0,250000), add=T)
+plot(eHistogram, col=eHistColor, ylim=c(0,15), xlim=c(0,250000), add=T)
+
+legend('right', c('a', 'b', 'c', 'd', 'e'), fill=c(aHistColor, bHistColor, cHistColor, dHistColor, eHistColor), border=NA)
+```
+
+```{r}
+set.seed(2017)
+n <- 1000
+data_unif <- runif(n, min=177, max=228953)
+hist(data_unif, xlim=c(0,250000), breaks=58, probability=TRUE, col='red2', main = "Uniform distribution samples")
+lines(density(data_unif, adjust=2), col=4)
+```
+
+## 2. 
+<b>Spacings:</b> Here the goal is to graphically examine the distribution of your sample spacings. There are 3 types of spacings to examine: spacings between consecutive palindromes, spacings between palindromes with one in between (i.e. sums of pairs of consecutive spacings), and spacings between palindromes with two in between (i.e. sums of triplets of consecutive spacings). Next, you can graphically compare these 3 types of spacings to those that come from random uniform scatter (using empirical cdf or histograms). Again, you should simulate at least 5 random uniform scatters. Lastly, using theoretical results discussed in lecture, identify the theoretical distributions of the spacings from random uniform scatter (you won’t be expected to know the distribution for the sums of consecutive triplets but it shouldn’t be too hard to intuit). Overlay these theoretical distributions as a cdf or density on your plots. 
+
+### 2a)
+Examine 3 types of spacings by plotting histograms
+```{r}
+
+space_1 = data.frame(diff(as.matrix(data)))
+head(space_1)
+hist_1 = hist(space_1$location, xlim=c(0,8000), breaks=16, col='red2', main="Distribution of Spacing Sample 1")
+
+
+d1 <- density(space_1$location) # returns the density data
+plot(d1) # plots the results
+polygon(d1, col="red", border="blue")
+```
+
+```{r}
+install.packages("zoo")
+library(zoo)
+```
+
+```{r}
+
+space_2 = rollapply(space_1, 2, sum)
+head(space_2)
+hist_2 = hist(space_2, xlim=c(0,8000), ylim=c(0,150), breaks=16, col='red2', main="Distribution of Spacing Sample 2")
+
+d2 <- density(space_2) # returns the density data
+plot(d2) # plots the results
+polygon(d2, col="green", border="blue")
+```
+
+```{r}
+
+```
+
+```{r}
+library(zoo)
+space_3 = rollapply(space_1, 3, sum)
+head(space_3)
+hist_3 = hist(space_3, xlim=c(0,8000), ylim=c(0,150), breaks=16, col='red2', main="Distribution of Spacing Sample 3")
+
+d3 <- density(space_3) # returns the density data
+plot(d3) # plots the results
+polygon(d3, col="yellow", border="blue")
+```
+```{r}
+space1HistColor = rgb(1,0,0,0.2)
+space2HistColor = rgb(0,1,0,0.2)
+space3HistColor = rgb(0,0,1,0.2)
+
+plot(hist_1, col=space1HistColor, ylim=c(0,150), xlim=c(0,8000), main="Distribution of 3 Different Types of Spacings")
+plot(hist_2, col=space2HistColor, ylim=c(0,150), xlim=c(0,8000), add=T)
+plot(hist_3, col=space3HistColor, ylim=c(0,150), xlim=c(0,8000), add=T)
+
+
+legend('right', c('Distribution of Spacing 1', 'Distribution of Spacing 2', 'Distribution of Spacing 3'), fill=c(aHistColor, bHistColor, cHistColor, dHistColor, eHistColor), border=NA)
+
+
+#density plot comparison
+
+plot(d1, col="red")
+lines(d2, col="green")
+lines(d3, col="blue")
+legend('right',c('Density of Spacing 1', 'Density of Spacing 2', 'Density of Spacing 3'),
+fill=c("red","green","blue"),border=NA)
+
+
+```
+
+### 2b) 
+Plot 5x3 histograms of the random uniform scatters (5 random uniform scatters, 3 types of spacings for each)
+```{r}
+N <- max(space_1$location, na.rm=TRUE)
+n <- 296
+gene <- seq(min(space_1$location, na.rm=TRUE), N)
+
+set.seed(200)
+data.sample <- sample.int(N, size=n, replace=FALSE)
+aHistogram = hist(data.sample, xlim=c(0,8000), breaks=16, col='red2', main="a")
+
+data.sample <- sample.int(N, size=n, replace=FALSE)
+bHistogram = hist(data.sample, xlim=c(0,8000), breaks=16, col='red2', main="b")
+
+data.sample <- sample.int(N, size=n, replace=FALSE)
+cHistogram = hist(data.sample, xlim=c(0,8000), breaks=16, col='red2', main="c")
+
+data.sample <- sample.int(N, size=n, replace=FALSE)
+dHistogram = hist(data.sample, xlim=c(0,8000), breaks=16,col='red2', main="d")
+
+data.sample <- sample.int(N, size=n, replace=FALSE)
+eHistogram = hist(data.sample, xlim=c(0,8000), breaks=16, col='red2', main="e")
+
+aHistColor = rgb(1,0,0,0.2)
+bHistColor = rgb(0,1,0,0.2)
+cHistColor = rgb(0,0,1,0.2)
+dHistColor = rgb(1,1,0,0.2)
+eHistColor = rgb(1,0,1,0.2)
+
+plot(hist_1, col='red2', ylim=c(0,150), xlim=c(0,8000), main=NA)
+plot(aHistogram, col=aHistColor, ylim=c(0,150), xlim=c(0,8000), add=T)
+plot(bHistogram, col=bHistColor, ylim=c(0,150), xlim=c(0,8000), add=T)
+plot(cHistogram, col=cHistColor, ylim=c(0,150), xlim=c(0,8000), add=T)
+plot(dHistogram, col=dHistColor, ylim=c(0,150), xlim=c(0,8000), add=T)
+plot(eHistogram, col=eHistColor, ylim=c(0,150), xlim=c(0,8000), add=T)
+
+
+legend('right', c('a', 'b', 'c', 'd', 'e'), fill=c(aHistColor, bHistColor, cHistColor, dHistColor, eHistColor), border=NA)
+```
+
+```{r}
+N <- max(space_2, na.rm=TRUE)
+n <- 296
+gene <- seq(min(space_2, na.rm=TRUE), N)
+
+set.seed(200)
+data.sample <- sample.int(N, size=n, replace=FALSE)
+aHistogram = hist(data.sample, xlim=c(0,8000), breaks=16, col='red2', main="a")
+
+data.sample <- sample.int(N, size=n, replace=FALSE)
+bHistogram = hist(data.sample, xlim=c(0,8000), breaks=16, col='red2', main="b")
+
+data.sample <- sample.int(N, size=n, replace=FALSE)
+cHistogram = hist(data.sample, xlim=c(0,8000), breaks=16, col='red2', main="c")
+
+data.sample <- sample.int(N, size=n, replace=FALSE)
+dHistogram = hist(data.sample, xlim=c(0,8000), breaks=16,col='red2', main="d")
+
+data.sample <- sample.int(N, size=n, replace=FALSE)
+eHistogram = hist(data.sample, xlim=c(0,8000), breaks=16, col='red2', main="e")
+
+aHistColor = rgb(1,0,0,0.2)
+bHistColor = rgb(0,1,0,0.2)
+cHistColor = rgb(0,0,1,0.2)
+dHistColor = rgb(1,1,0,0.2)
+eHistColor = rgb(1,0,1,0.2)
+
+plot(hist_2, col='red2', ylim=c(0,150), xlim=c(0,8000), main=NA)
+plot(aHistogram, col=aHistColor, ylim=c(0,150), xlim=c(0,8000), add=T)
+plot(bHistogram, col=bHistColor, ylim=c(0,150), xlim=c(0,8000), add=T)
+plot(cHistogram, col=cHistColor, ylim=c(0,150), xlim=c(0,8000), add=T)
+plot(dHistogram, col=dHistColor, ylim=c(0,150), xlim=c(0,8000), add=T)
+plot(eHistogram, col=eHistColor, ylim=c(0,150), xlim=c(0,8000), add=T)
+
+
+legend('right', c('a', 'b', 'c', 'd', 'e'), fill=c(aHistColor, bHistColor, cHistColor, dHistColor, eHistColor), border=NA)
+```
+
+
+```{r}
+N <- max(space_3, na.rm=TRUE)
+n <- 296
+gene <- seq(min(space_3, na.rm=TRUE), N)
+
+set.seed(200)
+data.sample <- sample.int(N, size=n, replace=FALSE)
+aHistogram = hist(data.sample, xlim=c(0,8000), breaks=16, col='red2', main="a")
+
+data.sample <- sample.int(N, size=n, replace=FALSE)
+bHistogram = hist(data.sample, xlim=c(0,8000), breaks=16, col='red2', main="b")
+
+data.sample <- sample.int(N, size=n, replace=FALSE)
+cHistogram = hist(data.sample, xlim=c(0,8000), breaks=16, col='red2', main="c")
+
+data.sample <- sample.int(N, size=n, replace=FALSE)
+dHistogram = hist(data.sample, xlim=c(0,8000), breaks=16,col='red2', main="d")
+
+data.sample <- sample.int(N, size=n, replace=FALSE)
+eHistogram = hist(data.sample, xlim=c(0,8000), breaks=16, col='red2', main="e")
+
+aHistColor = rgb(1,0,0,0.2)
+bHistColor = rgb(0,1,0,0.2)
+cHistColor = rgb(0,0,1,0.2)
+dHistColor = rgb(1,1,0,0.2)
+eHistColor = rgb(1,0,1,0.2)
+
+plot(hist_3, col='red2', ylim=c(0,150), xlim=c(0,8000), main=NA)
+plot(aHistogram, col=aHistColor, ylim=c(0,150), xlim=c(0,8000), add=T)
+plot(bHistogram, col=bHistColor, ylim=c(0,150), xlim=c(0,8000), add=T)
+plot(cHistogram, col=cHistColor, ylim=c(0,150), xlim=c(0,8000), add=T)
+plot(dHistogram, col=dHistColor, ylim=c(0,150), xlim=c(0,8000), add=T)
+plot(eHistogram, col=eHistColor, ylim=c(0,150), xlim=c(0,8000), add=T)
+
+
+legend('right', c('a', 'b', 'c', 'd', 'e'), fill=c(aHistColor, bHistColor, cHistColor, dHistColor, eHistColor), border=NA)
+```
+
+### 2c) 
+Compare 2a and 2b
+
+### 2d)
+Identify the theoretical distributions of the spacings from the random uniform scatter (we should identify 3 theoretical distributions, each for a different spacing)
+
+
+### 2e)
+Overlay the identified theoretical distributions as cdf on the plots in 2). (5x3 cdf?)
+
+*If you are plotting histograms, a density is more appropriate. If you are plotting cdfs, a cdf is more appropriate. Yes you are intended to overlay your densities/cdfs in their appropriate plots but again, try to be as concise as possible when visualizing.*
+
+## 3. 
+<b>Counts:</b> Here the goal is to use graphical and formal statistical methods to examine the counts of palindromes in regions of the DNA. Be sure to do this for a few different (but reasonable) interval lengths. The graphical displays should compare the distribution of counts to random uniform scatter (this will be analogous to the locations and spacings sections). Using results from lecture, you can organize a formal statistical test to further examine your distributions of counts.
+```{r}
+regionsplit <- function(n.region, gene, site){
+  count.int <- table(cut(site, breaks = seq(1, length(gene), length.out=n.region+1), include.lowest=TRUE))
+  count.vector <- as.vector(count.int)
+  count.tab <- table(factor(count.vector,levels=0:max(count.vector)))
+  return (count.tab)
+}
+```
+
+```{r}
+n.region <- 50
+N <- max(data$location, na.rm=TRUE)
+gene <- seq(177, N)
+O1.tab=regionsplit(n.region, gene, data$location)
+O2.tab=regionsplit(n.region, gene, data_sample)
+O3.tab=regionsplit(n.region, gene, data_unif)
+O1.tab
+O2.tab
+O3.tab
+```
+
+```{r}
+trunc=9
+lvls=factor(c(0:(trunc-1),paste(">=",trunc,sep="")),levels=c(0:(trunc-1),paste(">=",trunc,sep="")))
+O1=as.vector(O1.tab)
+O2=as.vector(O2.tab)
+O3=as.vector(O3.tab)
+O1.trunc=c(O1[1:trunc],sum(O1[-(1:trunc)]))
+O2.trunc=c(O2[1:trunc],sum(O2[-(1:trunc)]))
+O3.trunc=c(O3[1:trunc],sum(O3[-(1:trunc)]))
+lambda=n/n.region
+p=c(dpois(0:(trunc-1),lambda),1-sum(dpois(0:(trunc-1),lambda)))
+E=p*n.region
+tab1=data.frame(levels=lvls,Observed=O1.trunc,Expected=E)
+tab2=data.frame(levels=lvls,Observed=O2.trunc,Expected=E)
+tab3=data.frame(levels=lvls,Observed=O3.trunc,Expected=E)
+tab1
+tab2
+tab3
+
+barplot(tab1$Observed,col="red",xlab="Region",ylab="Frequency",main="Our Sample")
+barplot(tab2$Observed,col="green",xlab="Region",ylab="Frequency",main="Random Sample")
+barplot(tab3$Observed,col="blue",xlab="Region",ylab="Frequency",main="Uniform Sample")
+```
+
+```{r}
+
+chisq.test(O1.trunc,p=p,simulate.p.value=TRUE)
+chisq.test(O2.trunc,p=p,simulate.p.value=TRUE)
+chisq.test(O3.trunc,p=p,simulate.p.value=TRUE)
+```
+
+
+
+
+## 4.
+<b>Biggest Cluster:</b> Here the goal is to use randomization or theory to examine the largest cluster of palindromes in a sub-interval. Again, you’re expected to try a few different interval sizes. With respect to the randomization, focus on the probability of obtaining, in any subinterval, a count as large or larger than the count you observe in your sample. There is also a theoretical approach to obtaining such a probability. You are free to implement either method.
+
+
+```{r}
+
+```
+
+
+## Advanced Analysis
+```{r}
+
+```
+
+
+
+
+
+
+
