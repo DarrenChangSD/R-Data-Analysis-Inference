@@ -1,0 +1,137 @@
+---
+title: "Hw2"
+output: html_document
+---
+
+```{r}
+data <- read.table("videodata.txt", header=TRUE)
+```
+
+```{r}
+head(data)
+```
+
+```{r}
+fdata <- read.table("videoMultiple.txt",header=TRUE)
+```
+
+
+
+```{r pressure, echo=FALSE}
+head(fdata)
+```
+
+```{r}
+counts <- table(data$grade)
+bp <-barplot(counts, main="Expected Grades", xlab="Grade", ylim=c(0,60))
+text(bp, counts + 2, counts, font=2, col=2)
+```
+Advanced Analysis
+```{r}
+kruskal.test(action~point,data=fdata)
+```
+
+
+SCENARIO 5
+```{r}
+
+```
+
+```{r}
+# data for males
+male.ind <- which(data['sex'] == 1)
+data.male <- data[male.ind,]
+head(data.male)
+```
+
+  
+```{r}
+# data for females
+female.ind <- which(data['sex']==0)
+data.female <- data[female.ind,]
+head(data.female)
+```
+```{r}
+par(mfrow = c(1:2))
+
+counts <- table(data.male$like)
+bp <-barplot(counts, main="Like Distribution for Males", xlab="Like Choice", ylim=c(0,50))
+text(bp, counts + 2, counts, font=2, col=2)
+
+counts <- table(data.female$like)
+bp <-barplot(counts, main="Like Distribution for Females", xlab="Like Choice", ylim=c(0,50))
+text(bp, counts + 2, counts, font=2, col=2)
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+# data of students who do own a computer
+owncom.ind <- which(data['own'] == 1)
+data.owncom <- data[owncom.ind,]
+head(data.owncom)
+```
+
+```{r}
+# data of students who do not own a computer
+nocom.ind <- which(data['own'] == 0)
+data.nocom <- data[nocom.ind,]
+head(data.nocom)
+```
+
+```{r}
+par(mfrow = c(1:2))
+
+counts <- table(data.owncom$like)
+bp <-barplot(counts, main="Students who own Computers", xlab="Like Choice", ylim=c(0,50))
+text(bp, counts + 2, counts, font=2, col=2)
+
+counts <- table(data.nocom$like)
+bp <-barplot(counts, main="Students who don't have computers", xlab="Like Choice", ylim=c(0,50))
+text(bp, counts + 2, counts, font=2, col=2)
+```
+
+```{r}
+
+```
+```{r}
+# data of students who do work
+work.ind <- which(data['work'] > 0)
+data.work <- data[work.ind,]
+head(data.work)
+```
+
+```{r}
+# data of students that do not work
+nowork.ind <- which(data['work'] == 0)
+data.nowork <- data[nowork.ind,]
+head(data.nowork)
+```
+
+```{r}
+par(mfrow = c(1:2))
+
+counts <- table(data.work$like)
+bp <-barplot(counts, main="Students who work", xlab="Like Choice", ylim=c(0,50))
+text(bp, counts + 2, counts, font=2, col=2)
+
+counts <- table(data.nowork$like)
+bp <-barplot(counts, main="Students who do not work", xlab="Like Choice", ylim=c(0,50))
+text(bp, counts + 2, counts, font=2, col=2)
+```
+
+```{r}
+
+```
+

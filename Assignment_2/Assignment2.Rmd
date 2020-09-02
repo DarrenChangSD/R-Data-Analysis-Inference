@@ -1,0 +1,553 @@
+---
+title: "Homework 2"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### View it online: http://acsweb.ucsd.edu/~djc035/Assignment2.html
+
+# Objective
+The objective of this study is to investigate the responses of the participants in the study with the intention of providing udeful information about the students to the designers of the new computer lab? 
+
+## Scenario 1
+Begin by providing an estimate for the fraction of students who played a video game in the week prior to the survey. Provide an interval estimate as well as a point estimate for this proportion.
+
+
+### Point and Interval Estimation
+We are looking for the point estimate of the proportion of students who played a video game in the week prior to the survey. We created a new column called "binary_time" that is 1 if the student played more than 0 hours of a video game and 0 for students who played 0 hours.
+```{r read in data}
+#read in "videodata.txt" into data
+data <- read.table("videodata.txt", header=TRUE)
+data["binary_time"] <- ifelse(data$time>0, 1, 0)
+head(data)
+```
+
+The point estimation of the proportion of students who played a video game in the week prior to the survey is:
+```{r play proportion}
+play.percentage <- mean(data$binary_time)
+play.percentage
+```
+
+Now we also want to have a confidence interval of this estimator. However, clearly the distribution of binary_time variable is not Normal, it is a Bernoulli random variable. We know our data were drawn from a population with size N=314. Hence, we first create a bootstrap population of this size by repeating every sample for 31491=3.45 times. Here, we’ll just specify the parameter length.out to be 314.
+```{r set up boot.population}
+set.seed(573929)
+shuffle.ind=sample(1:nrow(data))
+boot.population <- rep(data$binary_time[shuffle.ind], length.out = 314)
+length(boot.population)
+```
+
+Then we will choose n=91 samples from the Bootstrap population and call this a Bootstrap sample.
+```{r sample of n is 91}
+sample1 <- sample(boot.population, size = 91, replace = TRUE)
+```
+
+Continue this procedure until we have 400 Bootstrap samples.
+```{r generate 400 Bootstrap samples}
+B = 400 # the number of bootstrap samples we want
+boot.sample <- array(dim = c(B, 91))
+for (i in 1:B) {
+  boot.sample[i, ] <- sample(boot.population, size = 91, replace = TRUE)
+}
+```
+
+Then we can calculate the sample mean for each Bootstrap sample (i.e. each row of the Bootstrap sample matrix).
+```{r calculate sample mean}
+boot.mean <- apply(X = boot.sample, MARGIN = 1, FUN = mean)
+head(boot.mean)
+```
+
+Let’s see the histogram of these Bootstrap sample means.
+```{r bootstrap histogram}
+hist(boot.mean, xlim=c(0.2,0.55), ylim=c(0,10), breaks = 20, probability = TRUE, density = 20, col = 8, border = 8, main = "Histogram of Bootstrap Mean", xlab = "Bootstrap Means")
+lines(density(boot.mean, adjust = 2), col = 2)
+```
+
+Check Normality by Q-Q plot and Kolmogorov-Smirnov test.
+```{r QQ plot and KS test}
+par(pty = 's')
+qqnorm(boot.mean)
+qqline(boot.mean)
+ks.test((boot.mean - mean(boot.mean))/sd(boot.mean), pnorm)
+```
+
+So we can accept that the sample mean follows a Normal distribution. Then we can construct 95% confidence intervals.
+```{r interval estimation with 95% CI}
+boot.sd <- sd(boot.mean)
+play.percentage + c(-1, 1)*1.96*boot.sd
+```
+
+
+## Scenario 2
+Check to see how the amount of time spent playing video games in the week prior to the survey compares to the reported frequency of play (daily, weekly, etc). How might the fact that there was an exam in the week prior to the survey affect your previous estimates and this comparison?
+
+```{r read in data for S2}
+#read in "videodata.txt" into data
+data <- read.table("videodata.txt", header=TRUE)
+head(data)
+```
+
+Show the number of rows in data
+```{r get number of rows in data}
+nrow(data)
+```
+
+```{r cleaning data}
+#cleaning unknown data rows
+data <- data[!(data$freq==99),]
+```
+
+Show the number of rows in data
+```{r get number of rows in data after}
+nrow(data)
+```
+
+Make four seperate data versions
+```{r make sub datasets}
+#use which() function to select rows which contain observation of smokers
+freq_1.ind <- which(data['freq'] == 1)
+#we pass in the vector of indices and use setdiff() function to get the non-smokers
+data.freq_1 <- data[freq_1.ind,]
+
+freq_2.ind <- which(data['freq'] == 2)
+data.freq_2 <- data[freq_2.ind,]
+
+freq_3.ind <- which(data['freq'] == 3)
+data.freq_3 <- data[freq_3.ind,]
+
+freq_4.ind <- which(data['freq'] == 4)
+data.freq_4 <- data[freq_4.ind,]
+
+data.freq_1
+data.freq_2
+data.freq_3
+data.freq_4
+```
+
+```{r mean of each freq time}
+mean(data.freq_1$time)
+mean(data.freq_2$time)
+mean(data.freq_3$time)
+mean(data.freq_4$time)
+```
+
+Plot for frequency and time.
+```{r}
+data$color[data$freq==1]="red"
+data$color[data$freq==2]="blue"
+data$color[data$freq==3]="orange"
+data$color[data$freq==4]="green"
+data$color
+
+plot(x = data$freq, y = data$time, col=data$color, axes=FALSE, main = "Frequency and Time Plot", xlab = "Frequency", ylab = "Time")
+axis(side=1, at=c(1, 2, 3, 4))
+axis(side=2, at=seq(0, 30, by=5))
+legend(3.3, 30, legend=c("daily","weekly","montly","semesterly"), col=c("red", "blue", "orange", "green"), pch="o")
+box()
+
+```
+
+Grouped bar chart for busy or not busy frequency and time 
+```{r}
+library(ggplot2)
+library(dplyr)
+
+data <- read.table("videodata.txt", header=TRUE)
+data <- data[!(data$freq==99 | data$busy==99),]
+
+busy.ind <- which(data['busy'] == 1)
+data.busy <- data[busy.ind,]
+
+not_busy.ind <- which(data['busy'] == 0)
+data.not_busy <- data[not_busy.ind,]
+
+#mutate(data, busy = factor(busy, labels = c("busy", "not busy")), freq = factor(freq))
+
+# Bar chart side by side
+#ggplot(data, aes(x = freq, fill = busy)) + geom_bar(position=position_dodge()) + theme_classic
+
+#ggplot(data, aes(freq, )) + geom_bar(aes(fill = busy), position = "dodge")
+
+c1 <- "red2"
+c2 <- "blue2"
+
+h_busy <- hist(data.busy$time, col=8, breaks=5, main = "Histogram of Time", xlab = "Time")
+h_not_busy <- hist(data.not_busy$time, col=8, breaks=5, main = "Histogram of Time", xlab = "Time")
+plot(h_busy, col = c1, ylim=c(0,50), main="Histogram of Play if Busy vs Not Busy Time Distribution", xlab="Time")
+plot(h_not_busy, col = c2, add = TRUE)
+legend("topright", 
+  legend = c("Play if Busy", "Play if Not Busy"), 
+  col = c(c1, c2), 
+  pch = c(15,15), 
+  bty = "n", 
+  pt.cex = 2, 
+  cex = 1.2, 
+  text.col = "black", 
+  horiz = F , 
+  inset = c(0.1, 0.1))
+```
+
+```{r}
+data <- read.table("videodata.txt", header=TRUE)
+data <- data[!(data$freq==99 | data$busy==99),]
+
+busy.ind <- which(data['busy'] == 1)
+data.busy <- data[busy.ind,]
+
+not_busy.ind <- which(data['busy'] == 0)
+data.not_busy <- data[not_busy.ind,]
+nrow(data.busy)/nrow(data)
+nrow(data.not_busy)/nrow(data)
+```
+
+## Scenario 3
+Consider making an interval estimate for the average amount of time spent playing video games in the week prior to the survey. Keep in mind the overall shape of the sample distribution. A simulation study may help determine the appropriateness of a interval estimate. 
+
+```{r }
+data <- read.table("videodata.txt", header=TRUE)
+head(data)
+time.mean <- mean(data$time)
+time.mean
+```
+
+```{r}
+hist(data$time, col=8, breaks=30, main = "Histogram of Time", xlab = "Time")
+```
+
+```{r}
+#old seed set.seed(189289)
+set.seed(573929)
+shuffle.ind=sample(1:nrow(data))
+boot.population <- rep(data$time[shuffle.ind], length.out = 314)
+length(boot.population)
+```
+
+```{r}
+sample1 <- sample(boot.population, size = 91, replace = TRUE)
+```
+
+```{r}
+B = 400 # the number of bootstrap samples we want
+boot.sample <- array(dim = c(B, 91))
+for (i in 1:B) {
+  boot.sample[i, ] <- sample(boot.population, size = 91, replace = TRUE)
+}
+```
+
+```{r}
+boot.mean <- apply(X = boot.sample, MARGIN = 1, FUN = mean)
+head(boot.mean)
+```
+
+```{r}
+hist(boot.mean, xlim=c(0.5,2.5), ylim=c(0,1.5), breaks = 20, probability = TRUE, density = 20, col = 8, border = 8, main = "Histogram of Bootstrap Mean", xlab = "Bootstrap Means")
+lines(density(boot.mean, adjust = 2), col = 2)
+```
+
+```{r}
+par(pty = 's')
+qqnorm(boot.mean)
+qqline(boot.mean)
+ks.test((boot.mean - mean(boot.mean))/sd(boot.mean), pnorm)
+```
+
+```{r}
+boot.sd <- sd(boot.mean)
+time.mean + c(-1, 1)*1.96*boot.sd
+```
+
+## Scenario 4
+Next consider the "attitude" questions. In general, do you think the students enjoy playing video games? if you had to make a short list of the most important reasons why studetns like/dislike video games, what would you put on the list? Don't forget that those students who say that they have never played video games or do not at all like video games are asked to skip over some of these questions. So, there may be many nonrespondents to the questions as to whether they think video games are educational, where they play video games, etc.
+
+Barplot for "like" distribution in the "videodata.txt" dataset
+```{r barplot for like distribution}
+counts <- table(data$like)
+counts
+bp <- barplot(counts, main="Like Distribution", xlab="Like Choice", ylab="# of Responses", ylim=c(0,50), col=8)
+text(bp, counts + 2, counts, font=2, col=2)
+```
+
+```{r}
+data <- read.table("videodata.txt", header=TRUE)
+
+like.ind <- which(!(data$like==1 | data$like==5 | data$like==99))
+like <- data[!(data$like==1 | data$like==5 | data$like==99),]
+
+like.ind
+
+```
+
+Reading in the new "videoMultiple.txt" dataset
+```{r read in data for S4}
+#read in "videoMultiple.txt" into data
+data <- read.table("videoMultiple.txt", header=TRUE)
+data.like <- data[like.ind,]
+data = data.like
+head(data)
+```
+
+Only like = 2,3,4
+```{r barplot for new like distribution}
+counts <- table(like$like)
+counts
+bp <- barplot(counts, main="New Like Distribution", xlab="Like Choice", ylab="# of Responses", ylim=c(0,50), col=8)
+text(bp, counts + 2, counts, font=2, col=2)
+```
+
+### Table 1
+action = Action
+
+adv = Adventure 
+
+sim = Simulation
+
+sport = Sports
+
+strategy = Strategy
+```{r create table 1}
+table1 <- data[,c("action", "adv", "sim", "sport", "strategy")]
+head(table1)
+```
+
+### Table 2
+graphic = Graphics/Realism
+
+relax = Relaxation
+
+coord = Eye/hand coordination
+
+challenge = MentalChallenge
+
+master = Felling of mastery
+
+bored = Bored
+
+other = other
+```{r create table 2}
+table2 <- data[,c("graphic", "relax", "coord", "challenge", "master", "bored")]
+head(table2)
+```
+
+```{r}
+graphic.ind <- which(table2["graphic"] == 1)
+table2.graphic <- table2[graphic.ind,]
+
+relax.ind <- which(table2["relax"] == 1)
+table2.relax <- table2[relax.ind,]
+
+coord.ind <- which(table2["coord"] == 1)
+table2.coord <- table2[coord.ind,]
+
+challenge.ind <- which(table2["challenge"] == 1)
+table2.challenge <- table2[challenge.ind,]
+
+master.ind <- which(table2["master"] == 1)
+table2.master <- table2[master.ind,]
+
+bored.ind <- which(table2["bored"] == 1)
+table2.bored <- table2[bored.ind,]
+
+like <- matrix(c(nrow(table2.graphic),nrow(table2.relax),nrow(table2.coord),nrow(table2.challenge),nrow(table2.master),nrow(table2.bored)),ncol=6,byrow=TRUE)
+colnames(like) <- c("graphic","relax","coord","challenge","master","bored")
+like <- as.table(like)
+like
+```
+
+```{r barplot for table2 distribution}
+bp <- barplot(like, main="Like Game Reason Distribution", xlab="Categories", ylab="# of Responses", ylim=c(0,65), col=8)
+text(bp, like + 2, like, font=2, col=2)
+```
+
+### Table 3
+time = Too much time
+
+frust = Frustrating
+
+lonely = Lonely
+
+rules = Too many rules
+
+cost = Costs too much
+
+boring = Boring
+
+friends = Friend’s don’t play
+
+point = It is pointless
+
+other2 = other
+```{r create table 3}
+table3 <- data[,c("time", "frust", "lonely", "rules", "cost", "boring", "friends", "point")]
+head(table3)
+```
+
+```{r}
+time.ind <- which(table3["time"] == 1)
+table3.time <- table3[time.ind,]
+
+frust.ind <- which(table3["frust"] == 1)
+table3.frust <- table3[frust.ind,]
+
+lonely.ind <- which(table3["lonely"] == 1)
+table3.lonely <- table3[lonely.ind,]
+
+rules.ind <- which(table3["rules"] == 1)
+table3.rules <- table3[rules.ind,]
+
+cost.ind <- which(table3["cost"] == 1)
+table3.cost <- table3[cost.ind,]
+
+boring.ind <- which(table3["boring"] == 1)
+table3.boring <- table3[boring.ind,]
+
+friends.ind <- which(table3["friends"] == 1)
+table3.friends <- table3[friends.ind,]
+
+point.ind <- which(table3["point"] == 1)
+table3.point <- table3[point.ind,]
+
+dislike <- matrix(c(nrow(table3.time),nrow(table3.frust),nrow(table3.lonely),nrow(table3.rules),nrow(table3.cost),nrow(table3.boring),nrow(table3.friends),nrow(table3.point)),ncol=8,byrow=TRUE)
+colnames(dislike) <- c("time", "frust", "lonely", "rules", "cost", "boring", "friends", "point")
+dislike <- as.table(dislike)
+dislike
+```
+
+```{r barplot for table3 distribution}
+bp <- barplot(dislike, main="Dislike Game Reason Distribution", xlab="Categories", ylab="# of Responses", ylim=c(0,50), col=8)
+text(bp, dislike + 2, dislike, font=2, col=2)
+```
+
+## Advanced Analysis and Scenario 5
+
+```{r}
+data <- read.table("videodata.txt", header=TRUE)
+```
+
+```{r}
+head(data)
+```
+
+```{r}
+fdata <- read.table("videoMultiple.txt",header=TRUE)
+```
+
+
+
+```{r pressure, echo=FALSE}
+head(fdata)
+```
+
+```{r}
+counts <- table(data$grade)
+bp <-barplot(counts, main="Expected Grades", xlab="Grade", ylim=c(0,60))
+text(bp, counts + 2, counts, font=2, col=2)
+```
+Advanced Analysis
+```{r}
+kruskal.test(action~point,data=fdata)
+```
+
+
+SCENARIO 5
+```{r}
+
+```
+
+```{r}
+# data for males
+male.ind <- which(data['sex'] == 1)
+data.male <- data[male.ind,]
+head(data.male)
+```
+
+  
+```{r}
+# data for females
+female.ind <- which(data['sex']==0)
+data.female <- data[female.ind,]
+head(data.female)
+```
+```{r}
+par(mfrow = c(1:2))
+
+counts <- table(data.male$like)
+bp <-barplot(counts, main="Like Distribution for Males", xlab="Like Choice", ylim=c(0,50))
+text(bp, counts + 2, counts, font=2, col=2)
+
+counts <- table(data.female$like)
+bp <-barplot(counts, main="Like Distribution for Females", xlab="Like Choice", ylim=c(0,50))
+text(bp, counts + 2, counts, font=2, col=2)
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+# data of students who do own a computer
+owncom.ind <- which(data['own'] == 1)
+data.owncom <- data[owncom.ind,]
+head(data.owncom)
+```
+
+```{r}
+# data of students who do not own a computer
+nocom.ind <- which(data['own'] == 0)
+data.nocom <- data[nocom.ind,]
+head(data.nocom)
+```
+
+```{r}
+par(mfrow = c(1:2))
+
+counts <- table(data.owncom$like)
+bp <-barplot(counts, main="Students who own Computers", xlab="Like Choice", ylim=c(0,50))
+text(bp, counts + 2, counts, font=2, col=2)
+
+counts <- table(data.nocom$like)
+bp <-barplot(counts, main="Students who don't have computers", xlab="Like Choice", ylim=c(0,50))
+text(bp, counts + 2, counts, font=2, col=2)
+```
+
+```{r}
+
+```
+```{r}
+# data of students who do work
+work.ind <- which(data['work'] > 0)
+data.work <- data[work.ind,]
+head(data.work)
+```
+
+```{r}
+# data of students that do not work
+nowork.ind <- which(data['work'] == 0)
+data.nowork <- data[nowork.ind,]
+head(data.nowork)
+```
+
+```{r}
+par(mfrow = c(1:2))
+
+counts <- table(data.work$like)
+bp <-barplot(counts, main="Students who work", xlab="Like Choice", ylim=c(0,50))
+text(bp, counts + 2, counts, font=2, col=2)
+
+counts <- table(data.nowork$like)
+bp <-barplot(counts, main="Students who do not work", xlab="Like Choice", ylim=c(0,50))
+text(bp, counts + 2, counts, font=2, col=2)
+```
+
+
+
