@@ -1,0 +1,200 @@
+---
+title: "Homework 4 v2"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## 1. Version 2
+
+```{r}
+gauge <- read.csv("gauge.txt", sep="")
+head(gauge)
+density <- gauge$density
+gain <- gauge$gain
+```
+
+```{r}
+obs.density <- unique(gauge$density)
+```
+
+```{r}
+obs.gain <- matrix(nrow = length(obs.density),ncol = nrow(gauge)/length(obs.density))
+for (i in 1:length(obs.density)){
+obs.gain[i,] <- gauge$gain[which(gauge$density==unique(gauge$density)[i])]
+}
+```
+
+```{r}
+obs.mean <- numeric(length(obs.density))
+obs.sd <- numeric(length(obs.density))
+for (i in 1:length(obs.density)) {
+  obs.mean[i] <- mean(obs.gain[i,])
+  obs.sd[i] <- sd(obs.gain[i,])
+}
+print(matrix(c(obs.density,obs.mean,obs.sd), nrow=9, ncol=3, dimnames=list(1:9,c("Density","Mean(gain)"," Std.dev(gain)"))))
+```
+
+```{r}
+str(gauge)
+library(ggplot2)
+
+ggplot(gauge,aes(x = density,y=gain))+
+geom_point(col="blue",size=2)+
+labs(y="Gain",x="Density",title="Scatter plot of Observed Data (90 observations)")+
+geom_smooth(mapping = aes(x = density,y=(gain)),col='black',se=FALSE)+
+geom_smooth(method = "lm", se = FALSE,col='red')
+```
+
+```{r}
+ggplot(gauge,aes(x = density,y=log(gain)))+
+geom_point(col="blue",size=2)+
+labs(y="Log(Gain)",x="Density",title="Scatter plot of Log Transformed Observed Data (90 observations)")+
+geom_smooth(mapping = aes(x = density, y=log(gain)),col='black',se= FALSE)
+```
+
+```{r}
+ggplot(gauge,aes(x = density,y=log(gain)))+
+geom_point(col="blue",size=2)+
+labs(y="Log(Gain)",x="Density",title="Scatter plot of Log Transformed Observed Data (90 observations)")+
+geom_smooth(method="lm", se=FALSE,col='red')+
+geom_smooth(mapping = aes(x = density, y=log(gain)),col='black',se=FALSE)
+```
+
+```{r}
+fit.log <- lm(density~I(log(gain)) )
+fit.linear <- lm( density~I(gain) )
+library(ellipse)
+plotcorr(cor(gauge))
+```
+
+```{r}
+print("The correlation matrix of the given data is: ")
+cor(gauge)
+```
+
+```{r}
+#F-value and R-square
+summary(fit.linear)
+summary(fit.log)
+```
+
+## 1. Residuals Version 2
+
+```{r}
+res.linear <- as.numeric(residuals(fit.linear))
+res.log <- as.numeric(residuals(fit.log))
+```
+
+```{r}
+# To check if residuals are nearly normal
+a <- fortify(fit.linear)
+sres.linear <- as.numeric(a$.stdresid)
+```
+
+```{r}
+b <- fortify(fit.log)
+sres.log <- as.numeric(b$.stdresid)
+ggplot(b, aes(sres.log))+
+geom_histogram(binwidth = diff(range(sres.log))/8)+
+labs(x="Standardized Residuals of Log-linear Fit Model",y="Counts",title="Histogram of Residuals of Log-linear Fit Model")+
+geom_smooth(aes(y=45*dnorm(sres.log,mean=mean(sres.log),sd=sd(sres.log))),se = FALSE)
+```
+
+```{r}
+ggplot(fit.linear, aes(density, .resid))+geom_point() + geom_hline(yintercept = 0) +
+geom_smooth(se = FALSE)+labs(x="Density",y="Residuals",title="Residuals for linear model")
+```
+
+```{r}
+ggplot(fit.linear, aes(.fitted, .stdresid)) +geom_point() + geom_hline(yintercept = 0) +
+geom_smooth(se = FALSE)+labs(x="Density",y="Standardized Residuals",title="Standardized Residuals for linear model")
+```
+
+```{r}
+ggplot(fit.log, aes(density, .resid)) +geom_point() + geom_hline(yintercept = 0) +
+geom_smooth(se = FALSE)+labs(x="Density",y="Residuals",title="Residuals for Log-linear model")
+```
+
+```{r}
+ggplot(fit.log, aes(density, .stdresid)) +geom_point() + geom_hline(yintercept = 0) +
+geom_smooth(se = FALSE)+labs(x="Density",y="Standardized Residuals",title="Standardized Residuals for Log-linear model")
+```
+
+```{r}
+qqplot <- function(y,distribution=qnorm,t) {
+  require(ggplot2)
+  x <- distribution(ppoints(y))
+  d <- data.frame(Theoretical_Quantiles=x, Sample_Quantiles=sort(y))
+  p <- ggplot(d, aes(x=Theoretical_Quantiles, y=Sample_Quantiles)) +geom_point() +
+  geom_line(aes(x=x, y=x)) +labs(title=t)
+  return(p)
+}
+```
+
+```{r}
+qqplot(sres.linear,t="Q-Q plot for residuals of Linear Fit")
+qqplot(sres.log,t="Q-Q plot for residuals of Log-linear Fit")
+```
+
+```{r}
+library(moments)
+kurt_res = kurtosis(res.log)
+cat("The kurtosis of the distribution of residuals is: ",kurt_res)
+```
+
+## 1. Homoscedasticity Version 2
+
+```{r}
+boxplot(res.linear,main="Box plot of residuals for Linear Fit")
+```
+
+```{r}
+boxplot(res.log,main="Box plot of residuals for Log-linear Fit")
+```
+
+```{r}
+ggplot(b,aes(x=1:90,y=.resid))+geom_point()+labs(title="Residuals for Log-Linear fit",x="index",y="Residuals")+ylim(c(-1,1))
+```
+
+```{r}
+ggplot(b,aes(x=1:90,y=.stdresid))+geom_point(col='blue')+ylim(c(-4,4))+geom_hline(yintercept =3)+geom_hline(yintercept = -3)+
+labs(title="Residuals for Log-linear Fit",y="Standardised residuals",x="index")
+```
+
+```{r}
+ggplot(gauge,aes(y = density,x=gain))+geom_point(col="blue",size=2)+
+labs(x="Gain",y="Density",title="Scatter plot of Observed Data (90 observations)")+
+stat_smooth(method = "lm", se =TRUE,col='red',level=0.95)
+```
+
+```{r}
+ggplot(gauge,aes(y = density,x=log(gain)))+geom_point(col="blue",size=2)+
+labs(x="Log(Gain)",y="Density",title="Scatter plot of Log-Transformed Observed Data (90 observations)")+
+stat_smooth(method = "lm", se =TRUE,col='red',level=0.95)
+```
+
+```{r}
+mean_res = mean(res.log)
+var_res = var(res.log)
+range_res = c(min(res.log), max(res.log))
+```
+
+## 1. Errors Version 2
+
+```{r}
+# Mean Square Error
+rmse <- function(error){
+return(sqrt(mean(error^2)))
+}
+# RMSE for linear model
+RMSE.linear <- rmse(res.log)
+cat("The RMS error of the regression fit is: ",RMSE.linear)
+```
+
+```{r}
+abs_res_error = sum(abs(res.log))
+abs_res_error
+```

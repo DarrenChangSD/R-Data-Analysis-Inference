@@ -1,0 +1,140 @@
+---
+title: "Hw4"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+
+```{r}
+data <- read.table("gauge.txt",header=TRUE)
+head(data)
+```
+
+## Including Plots
+
+
+```{r }
+plot(data, main ="Scatter Plot")
+
+#Fit linear model using OLS
+model=lm(data$gain~data$density,data)
+
+#Overlay best-fit line on scatter plot
+abline(model,col='red')
+```
+
+```{r}
+#Scatter Plot
+plot (data, pch=16)
+
+#Predict Y using Linear Model
+predY <- predict (model, data)
+
+#Overlay Predictions on Scatter Plot
+points (data$density, predY, col = "blue", pch=16)
+```
+
+```{r}
+#Install Package
+library(hydroGOF)
+```
+
+```{r}
+#Calculate RMSE 
+RMSE=rmse(predY,data$gain)
+```
+
+```{r}
+## Fit SVR model and visualize using scatter plot
+
+#Install Package
+#install.packages("e1071")
+
+#Load Library
+library(e1071)
+ 
+#Scatter Plot
+plot(data)
+
+#Regression with SVM
+modelsvm = svm(data$gain~data$density,data)
+
+#Predict using SVM regression
+predYsvm = predict(modelsvm, data)
+
+#Overlay SVM Predictions on Scatter Plot
+points(data$density, predYsvm, col = "red", pch=16)
+
+```
+
+```{r}
+##Calculate parameters of the SVR model
+
+#Find value of W
+W = t(modelsvm$coefs) %*% modelsvm$SV
+
+#Find value of b
+b = modelsvm$rho
+```
+
+```{r}
+#Calculate RMSE 
+RMSEsvm=rmse(predYsvm,data$gain)
+```
+
+```{r}
+## Tuning SVR model by varying values of maximum allowable error and cost parameter
+
+#Tune the SVM model
+OptModelsvm=tune(svm, data$gain~data$density, data=data,ranges=list(elsilon=seq(0,1,0.1), cost=1:100))
+
+#Print optimum value of parameters
+print(OptModelsvm)
+
+#Plot the perfrormance of SVM Regression model
+plot(OptModelsvm)
+```
+
+```{r}
+## Select the best model out of 1100 trained models and compute RMSE
+
+#Find out the best model
+BstModel=OptModelsvm$best.model
+BstModel
+
+#Predict Y using best model
+PredYBst=predict(BstModel,data)
+PredYBst
+
+#Calculate RMSE of the best model 
+RMSEBst=rmse(PredYBst,data$gain)
+RMSEBst
+```
+
+```{r}
+##Calculate parameters of the Best SVR model
+
+#Find value of W
+W = t(BstModel$coefs) %*% BstModel$SV
+
+#Find value of b
+b = BstModel$rho
+
+```
+
+```{r}
+## Plotting SVR Model and Tuned Model in same plot
+
+plot(data, pch=16)
+points(data$density, predYsvm, col = "blue", pch=3)
+points(data$density, PredYBst, col = "red", pch=4)
+points(data$density, predYsvm, col = "blue", pch=3, type="l")
+points(data$density, PredYBst, col = "red", pch=4, type="l")
+
+```
+

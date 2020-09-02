@@ -1,0 +1,352 @@
+---
+title: "Homework 4"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### View it online: http://acsweb.ucsd.edu/~djc035/Assignment4.html
+
+# Objective
+The aim of this lab is to provide a simple procedure for converting gain into density when the gauge is in operation. Keep in mind that the experiment was conducted by varying density and measuring the response in gain, but when the gauge is ultimately in use, the snow-pack density is to be estimated from the measured gain.
+
+## 1. 
+<b>Fitting:</b> Use the data to fit the gain, or a transformation of gain, to density. Try sketching the least squares line on a scatter plot.
+
+** Do the residuals indicate any problems with the fit?
+
+** If the densities of the polyethylene blocks are not reported exactly, how might this affect the fit?
+
+```{r}
+data <- read.csv("gauge.txt", sep="")
+head(data)
+```
+
+```{r}
+density <- data$density
+gain <- data$gain
+```
+
+```{r}
+library(ggplot2)
+
+ggplot(data,aes(x = density, y = gain)) +
+geom_point(col = "black", size = 0.5) +
+labs(y = "Gain", x = "Density", title = "Least Squares Regression for Gain and Density") +
+geom_smooth(method = "lm", se = FALSE, col = 'red')
+```
+
+```{r}
+ggplot(data, aes(x = density, y = log(gain))) +
+geom_point(col = "black", size = 0.5) +
+labs(y = "Log(Gain)", x = "Density", title = "Least Squares Regression for Log-Transformed Gain and Density") +
+geom_smooth(method = "lm", se = FALSE, col = 'red')
+```
+
+```{r}
+fit.linear <- lm(density~I(gain))
+fit.log <- lm(density~I(log(gain)))
+
+summary(fit.linear)
+summary(fit.log)
+```
+
+```{r}
+ggplot(fit.linear, aes(density, .resid)) + 
+geom_point() + 
+geom_hline(yintercept = 0) +
+labs(x = "Density", y = "Residuals", title = "Linear Model Residuals")
+```
+
+```{r}
+ggplot(fit.log, aes(density, .resid)) + 
+geom_point() +
+geom_hline(yintercept = 0) +
+labs(x = "Density", y = "Residuals", title = "Log-linear Model Residuals")
+```
+
+```{r}
+res.linear <- as.numeric(residuals(fit.linear))
+res.log <- as.numeric(residuals(fit.log))
+
+lin <- fortify(fit.linear)
+sres.linear <- as.numeric(lin$.stdresid)
+
+log <- fortify(fit.log)
+sres.log <- as.numeric(log$.stdresid)
+```
+
+```{r}
+qqplot <- function(y, distribution = qnorm, tit) {
+  require(ggplot2)
+  x <- distribution(ppoints(y))
+  df <- data.frame(Theoretical = x, Sample = sort(y))
+  plot <- ggplot(df, aes(x = Theoretical, y = Sample)) +
+    geom_point() +
+    geom_line(aes(x = x, y = x)) + 
+    labs(title = tit, x = 'Theoretical Quantiles', y = 'Sample Quantiles')
+  return(plot)
+}
+```
+
+```{r}
+qqplot(sres.linear, tit = "Q-Q plot Linear Fit Residuals")
+
+qqplot(sres.log, tit = "Q-Q plot Log-linear Fit Residuals")
+```
+
+## 2.
+<b>Predicting:</b> 
+Ultimately we are interested in answering questions such as: Given a gain reading of 38.6, what is the density of the snow-pack? or Given a gain reading of 426.7, what is the density of snow-pack? These two numeric values, 38.6 and 426.7, were chosen because they are the average gains for the 0.508 and 0.001 densities, respectively.
+
+** Develop a procedure for adding CIs around your least squares line that can be used to make interval estimates for the snow-pack density from gain measurements. Keep in mind how the data were collected: several measurements of gain were taken for polyenthylene blocks of known density.
+
+```{r}
+data <- read.table("gauge.txt", header=TRUE)
+head(data)
+```
+
+```{r}
+gain = data$gain
+density = data$density
+plot(gain, density, pch=16)
+```
+
+```{r}
+log.gain = log(data$gain)
+lm2 = lm(density~log.gain, data = data)
+summary(lm2)
+```
+
+In such case, our remedy is polynomial regression. To start, we will first look at a degree 1 and 2 examples.
+
+```{r}
+fit.d1 <- lm(density~log.gain, data = data)
+pts <- seq(0, 8, length.out=90)
+val.d1 <- predict(fit.d1, data.frame(log.gain=pts))
+plot(log.gain, density, pch=16)
+lines(pts, val.d1, col="blue", lwd=2)
+```
+
+```{r}
+CI.conf <- predict(fit.d1, data.frame(log.gain=pts), interval = "confidence") #confidence interval
+CI.pred <- predict(fit.d1, data.frame(log.gain=pts), interval = "predict") #prediction interval
+plot(log.gain, density, pch=16, xlab='Log(Gain)', ylab='Density', main='95% Confidence Interval')
+#lines(pts, CI.conf[,"fit"], col="black", lwd=2)
+lines(pts, CI.conf[,"lwr"], col="blue", lwd=1) 
+lines(pts, CI.conf[,"upr"], col="blue", lwd=1)
+
+lines(pts, CI.pred[,"lwr"], col="red", lwd=1)
+lines(pts, CI.pred[,"upr"], col="red", lwd=1)
+```
+
+```{r}
+fit.d1 <- lm(log.gain~density, data = data)
+pts <- seq(0, 8, length.out=90)
+val.d1 <- predict(fit.d1, data.frame(density=pts))
+plot(density, log.gain, pch=16)
+lines(pts, val.d1, col="blue", lwd=2)
+```
+
+```{r}
+CI.conf <- predict(fit.d1, data.frame(density=pts), interval = "confidence") #confidence interval
+CI.pred <- predict(fit.d1, data.frame(density=pts), interval = "predict") #prediction interval
+plot(density, log.gain, pch=16, xlab='Density', ylab='Log(Gain)', main='95% Confidence Interval')
+#lines(pts, CI.conf[,"fit"], col="black", lwd=2)
+lines(pts, CI.conf[,"lwr"], col="blue", lwd=1) 
+lines(pts, CI.conf[,"upr"], col="blue", lwd=1)
+
+lines(pts, CI.pred[,"lwr"], col="red", lwd=1)
+lines(pts, CI.pred[,"upr"], col="red", lwd=1)
+```
+
+```{r}
+newdata = data.frame(density=0.6860)
+predict(fit.d1, newdata, interval = "confidence")
+```
+
+```{r}
+newdata = data.frame(density=0.6040)
+predict(fit.d1, newdata, interval = "confidence")
+```
+
+```{r}
+newdata = data.frame(density=0.5080)
+predict(fit.d1, newdata, interval = "confidence")
+```
+
+```{r}
+newdata = data.frame(density=0.4120)
+predict(fit.d1, newdata, interval = "confidence")
+```
+
+```{r}
+newdata = data.frame(density=0.3180)
+predict(fit.d1, newdata, interval = "confidence")
+```
+
+```{r}
+newdata = data.frame(density=0.2230)
+predict(fit.d1, newdata, interval = "confidence")
+```
+
+```{r}
+newdata = data.frame(density=0.1480)
+predict(fit.d1, newdata, interval = "confidence")
+```
+
+```{r}
+newdata = data.frame(density=0.0800)
+predict(fit.d1, newdata, interval = "confidence")
+```
+
+```{r}
+newdata = data.frame(density=0.0010)
+predict(fit.d1, newdata, interval = "confidence")
+```
+
+## Advanced Analysis
+```{r}
+data <- read.table("gauge.txt",header=TRUE)
+head(data)
+```
+
+## Including Plots
+
+
+```{r }
+plot(data, main ="Scatter Plot")
+
+#Fit linear model using OLS
+model=lm(data$gain~data$density,data)
+
+#Overlay best-fit line on scatter plot
+abline(model,col='red')
+```
+
+```{r}
+#Scatter Plot
+plot (data, pch=16)
+
+#Predict Y using Linear Model
+predY <- predict (model, data)
+
+#Overlay Predictions on Scatter Plot
+points (data$density, predY, col = "blue", pch=16)
+```
+
+```{r}
+#Install Package
+library(hydroGOF)
+```
+
+```{r}
+#Calculate RMSE 
+RMSE=rmse(predY,data$gain)
+```
+
+```{r}
+## Fit SVR model and visualize using scatter plot
+
+#Install Package
+#install.packages("e1071")
+
+#Load Library
+library(e1071)
+ 
+#Scatter Plot
+plot(data, xlab='Density', ylab='Gain', main='SVR Model for Gain and Density')
+
+#Regression with SVM
+modelsvm = svm(data$gain~data$density,data)
+
+#Predict using SVM regression
+predYsvm = predict(modelsvm, data)
+
+#Overlay SVM Predictions on Scatter Plot
+points(data$density, predYsvm, col = "red", pch=16)
+
+```
+
+```{r}
+##Calculate parameters of the SVR model
+
+#Find value of W
+W = t(modelsvm$coefs) %*% modelsvm$SV
+
+#Find value of b
+b = modelsvm$rho
+```
+
+```{r}
+#Calculate RMSE 
+RMSEsvm=rmse(predYsvm,data$gain)
+```
+
+```{r}
+## Tuning SVR model by varying values of maximum allowable error and cost parameter
+
+#Tune the SVM model
+OptModelsvm=tune(svm, data$gain~data$density, data=data,ranges=list(elsilon=seq(0,1,0.1), cost=1:100))
+
+#Print optimum value of parameters
+print(OptModelsvm)
+
+#Plot the perfrormance of SVM Regression model
+plot(OptModelsvm)
+```
+
+```{r}
+## Select the best model out of 1100 trained models and compute RMSE
+
+#Find out the best model
+BstModel=OptModelsvm$best.model
+BstModel
+
+#Predict Y using best model
+PredYBst=predict(BstModel,data)
+PredYBst
+
+#Calculate RMSE of the best model 
+RMSEBst=rmse(PredYBst,data$gain)
+RMSEBst
+```
+
+```{r}
+##Calculate parameters of the Best SVR model
+
+#Find value of W
+W = t(BstModel$coefs) %*% BstModel$SV
+
+#Find value of b
+b = BstModel$rho
+
+```
+
+```{r}
+## Plotting SVR Model and Tuned Model in same plot
+
+plot(data, pch=16, xlab='Density', ylab='Gain', main='SVR Model vs Tuned SVR Model')
+points(data$density, predYsvm, col = "blue", pch=3)
+points(data$density, PredYBst, col = "red", pch=4)
+points(data$density, predYsvm, col = "blue", pch=3, type="l")
+points(data$density, PredYBst, col = "red", pch=4, type="l")
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

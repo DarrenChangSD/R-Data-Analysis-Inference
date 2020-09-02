@@ -1,0 +1,148 @@
+---
+title: "Homework 4 p1 v1"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r requires}
+require(ggplot2)
+require(dplyr)
+require(polynom)
+```
+
+### View it online: http://acsweb.ucsd.edu/~djc035/Assignment4.html
+
+# Objective
+The aim of this lab is to provide a simple procedure for converting gain into density when the gauge is in operation. Keep in mind that the experiment was conducted by varying density and measuring the response in gain, but when the gauge is ultimately in use, the snow-pack density is to be estimated from the measured gain.
+
+## 1. 
+<b>Fitting:</b> Use the data to fit the gain, or a transformation of gain, to density. Try sketching the least squares line on a scatter plot.
+
+** Do the residuals indicate any problems with the fit?
+
+** If the densities of the polyethylene blocks are not reported exactly, how might this affect the fit?
+
+```{r read in data}
+#read in "gauge.txt" into data
+data <- read.table("gauge.txt", header=TRUE)
+head(data)
+
+nrow(data)
+
+plot(data$gain, data$density, xlab='Gain', ylab='Density', main='Plot Gain vs Density')
+```
+
+Fit line on original dataset
+```{r plot with linear regression}
+fit <- lm(density~gain, data=data)
+summary(fit)
+
+plot(data$gain, data$density)
+abline(fit, col="red")
+```
+
+```{r}
+res.log <- as.numeric(residuals(fit))
+library(moments)
+kurt_res = kurtosis(res.log)
+cat("The kurtosis of the distribution of residuals is: ",kurt_res)
+```
+
+```{r linearity check}
+plot(fit$residuals)
+abline(0, 0, col="red")
+```
+
+```{r}
+hist(fit$residuals)
+```
+
+```{r}
+qqnorm(fit$residuals)
+qqline(fit$residuals, col="red")
+```
+
+From plotting the residuals we can see a pattern from each group of densities. The residuals follows a quadratic curve and do not appear to show randonmess within each density.
+
+```{r}
+sd(data$gain)
+```
+
+```{r}
+mean(data$gain)
+```
+
+(WRITING NOT MINE DETAILS MAY BE WRONG)
+
+Our data follows a hyperbolic curvature and has extreme variability since the mean of the gain is 142.57 and the standard deviation is 133.27, which are unusually proportional to each other. With highly skewed data if we make a transformation that will give us a linearity we will be able to fit a straight line with higher accuracy. Here we will make a log transformation such that y′=log(y) where y′ will be our transformed data that we will call log.gain
+```{r}
+data$log.gain = log(data$gain)
+fit2 = lm(log.gain~density, data=data)
+summary(fit2)  
+```
+
+
+
+```{r}
+plot(data$density,data$log.gain)
+abline(fit2, col="red")
+```
+
+Here we can a much more accurate fit to the data that passes through nearly every single density at least once. The equation of our line here is ŷ =1.3−0.216x and our R2=0.996 explains 18% more than our original fit. Our RMSE=0.0146 is significantly less than the first fit as well, which tells us that this is a much more accurate fit
+
+```{r}
+plot(fit2$residuals)
+abline(0, 0, col="black")
+```
+
+```{r}
+qqnorm(data$log.gain)
+qqline(data$log.gain, col="red")
+```
+
+From this plot of the residuals we can see much more randomness between the distances from our fitted line and the observed data. The residuals on the left half are centered around 0, however, on the right appears to show less randomness and doesn’t center around 0.
+
+## Density Error
+
+```{r read in data for error}
+#read in "gauge.txt" into data
+data <- read.table("gauge.txt", header=TRUE)
+head(data)
+
+nrow(data)
+```
+
+```{r}
+data$density <- round(data$density, digits=1)
+head(data)
+```
+
+```{r}
+plot(data$gain, data$density, xlab='Gain', ylab='Density', main='Plot Gain vs Density')
+```
+
+```{r}
+fit <- lm(density~gain, data=data)
+summary(fit)
+
+plot(data$density, log(data$gain))
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
